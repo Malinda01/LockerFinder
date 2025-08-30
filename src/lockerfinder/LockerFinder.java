@@ -1,21 +1,12 @@
-package lockerfinder;
+//package smartlocker;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.util.*;
-import lockerfinder.LockerSystem.MainFrame;
 
-/**
- *
- * @authors
- * COHNDSE242F-015 : A.M.P.M.G.B Amarakoon
- * COHNDSE242F-016 : P.A.T.D.Gunawardhana
- * COHNDSE242F-017 : U.S.S.Udakanda
- * COHNDSE242F-018 : M.M.P.N Munasinghe
- * 
- */
+// ------------------- MAIN CLASS -------------------
 public class LockerFinder {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
@@ -104,14 +95,17 @@ class Graph {
     }
 }
 
-// ================= PATH RESULT =================
+// ------------------- PATH RESULT -------------------
 class PathResult {
     public final int[] dist;
     public final int[] prev;
-    public PathResult(int[] dist, int[] prev) { this.dist = dist; this.prev = prev; }
+    public PathResult(int[] dist, int[] prev) {
+        this.dist = dist;
+        this.prev = prev;
+    }
 }
 
-// ================= LOCKER SYSTEM =================
+// ------------------- LOCKER SYSTEM -------------------
 class LockerSystem {
     private final boolean[] isLocker;
     private final boolean[] occupied;
@@ -151,13 +145,51 @@ class LockerSystem {
             occupied[locker] = true;
             assignedTo[locker] = user;
             int[] path = getPathToLocker(g, src, locker);
-            double km = g.calculatePathDistance(path)/1000.0;
+            double km = g.calculatePathDistance(path) / 1000.0;
             return "Assigned " + g.getName(locker) + " to " + user + " | Distance: " + String.format("%.2f km", km);
         } else {
             waitingQueue.add(user);
             return "All lockers full. " + user + " added to queue.";
         }
     }
+
+    public String releaseLocker(int lockerId, Graph g, int src) {
+        if (!isLocker[lockerId]) return "Not a locker.";
+        if (!occupied[lockerId]) return "Locker already free.";
+
+        String prevUser = assignedTo[lockerId];
+        occupied[lockerId] = false;
+        assignedTo[lockerId] = null;
+
+        StringBuilder sb = new StringBuilder("Released ")
+                .append(g.getName(lockerId)).append(" (previously ").append(prevUser).append(").");
+        if (!waitingQueue.isEmpty()) {
+            String next = waitingQueue.poll();
+            int newLock = findNearestAvailableLocker(g, src);
+            if (newLock != -1) {
+                occupied[newLock] = true;
+                assignedTo[newLock] = next;
+                int[] path = getPathToLocker(g, src, newLock);
+                double km = g.calculatePathDistance(path) / 1000.0;
+                sb.append(" Assigned ").append(g.getName(newLock))
+                        .append(" to ").append(next)
+                        .append(" | Distance: ").append(String.format("%.2f km", km));
+            } else {
+                waitingQueue.add(next);
+            }
+        }
+        return sb.toString();
+    }
+
+    public int[] getLockerIds() {
+        int count = 0;
+        for (boolean b : isLocker) if (b) count++;
+        int[] ids = new int[count];
+        int k = 0;
+        for (int i = 0; i < isLocker.length; i++) if (isLocker[i]) ids[k++] = i;
+        return ids;
+    }
+}
 
 // ------------------- UI CLASSES - Interface -------------------
 class GraphPanel extends JPanel {
