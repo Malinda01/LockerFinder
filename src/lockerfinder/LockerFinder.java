@@ -2,14 +2,16 @@ package lockerfinder;
 
 import java.awt.Point;
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.Queue;
 import javax.swing.SwingUtilities;
 
 /**
  *
  * @authors
  * COHNDSE242F-015 : A.M.P.M.G.B Amarakoon
- * COHNDSE242F-016 : 
- * COHNDSE242F-017 : 
+ * COHNDSE242F-016 : P.A.T.D.Gunawardhana
+ * COHNDSE242F-017 : U.S.S.Udakanda
  * COHNDSE242F-018 : M.M.P.N Munasinghe
  * 
  */
@@ -100,3 +102,58 @@ class Graph {
         return dist;
     }
 }
+
+// ================= PATH RESULT =================
+class PathResult {
+    public final int[] dist;
+    public final int[] prev;
+    public PathResult(int[] dist, int[] prev) { this.dist = dist; this.prev = prev; }
+}
+
+// ================= LOCKER SYSTEM =================
+class LockerSystem {
+    private final boolean[] isLocker;
+    private final boolean[] occupied;
+    private final String[] assignedTo;
+    private final Queue<String> waitingQueue = new LinkedList<>();
+
+    public LockerSystem(boolean[] lockerNodes) {
+        int n = lockerNodes.length;
+        isLocker = Arrays.copyOf(lockerNodes, n);
+        occupied = new boolean[n];
+        assignedTo = new String[n];
+    }
+
+    public boolean isLocker(int node) { return isLocker[node]; }
+    public boolean isOccupied(int node) { return occupied[node]; }
+    public String assignedTo(int node) { return assignedTo[node]; }
+
+    public int findNearestAvailableLocker(Graph g, int src) {
+        PathResult pr = g.dijkstra(src);
+        int best = -1, bestDist = Integer.MAX_VALUE;
+        for (int i = 0; i < isLocker.length; i++) {
+            if (isLocker[i] && !occupied[i] && pr.dist[i] < bestDist) {
+                best = i; bestDist = pr.dist[i];
+            }
+        }
+        return best;
+    }
+
+    public int[] getPathToLocker(Graph g, int src, int locker) {
+        PathResult pr = g.dijkstra(src);
+        return g.reconstructPath(locker, pr.prev);
+    }
+
+    public String requestLocker(String user, Graph g, int src) {
+        int locker = findNearestAvailableLocker(g, src);
+        if (locker != -1) {
+            occupied[locker] = true;
+            assignedTo[locker] = user;
+            int[] path = getPathToLocker(g, src, locker);
+            double km = g.calculatePathDistance(path)/1000.0;
+            return "Assigned " + g.getName(locker) + " to " + user + " | Distance: " + String.format("%.2f km", km);
+        } else {
+            waitingQueue.add(user);
+            return "All lockers full. " + user + " added to queue.";
+        }
+    }
