@@ -157,3 +157,136 @@ class LockerSystem {
             return "All lockers full. " + user + " added to queue.";
         }
     }
+
+// ------------------- UI CLASSES - Interface -------------------
+class GraphPanel extends JPanel {
+    private final Graph graph;
+    private final LockerSystem lockerSystem;
+    private int[] highlightedPath = new int[0];
+
+    public GraphPanel(Graph graph, LockerSystem lockerSystem) {
+        this.graph = graph;
+        this.lockerSystem = lockerSystem;
+        setPreferredSize(new Dimension(900, 500)); //Window height and width
+        setBackground(Color.WHITE);
+    }
+
+    public void setHighlightedPath(int[] path) {
+        highlightedPath = path != null ? path : new int[0];
+        repaint();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // Draw edges
+        for (int u = 0; u < graph.size(); u++) {
+            Point pu = graph.getPos(u);
+            for (int v = u + 1; v < graph.size(); v++) {
+                if (graph.getAdjMatrix()[u][v] > 0) {
+                    Point pv = graph.getPos(v);
+                    boolean onPath = isEdgeOnPath(u, v);
+                    g2.setStroke(new BasicStroke(onPath ? 3f : 1f));
+                    g2.setColor(onPath ? Color.RED : Color.LIGHT_GRAY);
+                    g2.drawLine(pu.x, pu.y, pv.x, pv.y);
+                }
+            }
+        }
+
+        // Draw nodes
+        for (int i = 0; i < graph.size(); i++) {
+            Point p = graph.getPos(i);
+            boolean isLocker = lockerSystem.isLocker(i);
+            boolean onPath = contains(highlightedPath, i);
+
+            g2.setColor(onPath ? Color.RED : (isLocker ? new Color(0, 150, 0) : new Color(30, 90, 255)));
+            g2.fillOval(p.x - 12, p.y - 12, 24, 24);
+
+            // Draw border
+            g2.setColor(Color.BLACK);
+            g2.setStroke(new BasicStroke(1f));
+            g2.drawOval(p.x - 12, p.y - 12, 24, 24);
+        }
+
+        // Draw labels separately to handle overlaps better
+        g2.setColor(Color.BLACK);
+        g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 11f)); // Slightly smaller font
+        FontMetrics fm = g2.getFontMetrics();
+        
+        // Create list of label positions to avoid overlaps
+        java.util.List<Rectangle> usedAreas = new java.util.ArrayList<>();
+        
+        for (int i = 0; i < graph.size(); i++) {
+            Point p = graph.getPos(i);
+            String label = graph.getName(i);
+            
+            // Try to shorten very long labels
+            String displayLabel = label;
+            if (label.length() > 25) {
+                displayLabel = label.substring(0, 22) + "...";
+            }
+            
+            int labelWidth = fm.stringWidth(displayLabel);
+            int labelHeight = fm.getHeight();
+            
+            // Try different positions for the label
+            int[] yOffsets = {25, -8, 35, -18}; // Below, above, further below, further above
+            int[] xOffsets = {0, -labelWidth/4, labelWidth/4}; // Center, left, right
+            
+            boolean placed = false;
+            for (int yOff : yOffsets) {
+                for (int xOff : xOffsets) {
+                    int labelX = p.x - labelWidth/2 + xOff;
+                    int labelY = p.y + yOff;
+                    
+                    Rectangle labelRect = new Rectangle(labelX - 2, labelY - labelHeight, 
+                                                      labelWidth + 4, labelHeight + 2);
+                    
+                    // Check if this position overlaps with any existing label
+                    boolean overlaps = false;
+                    for (Rectangle used : usedAreas) {
+                        if (labelRect.intersects(used)) {
+                            overlaps = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!overlaps && labelX > 5 && labelX + labelWidth < getWidth() - 5 
+                        && labelY > 5 && labelY < getHeight() - 5) {
+                        // Draw the label
+                        g2.drawString(displayLabel, labelX, labelY);
+                        usedAreas.add(labelRect);
+                        placed = true;
+                        break;
+                    }
+                }
+                if (placed) break;
+            }
+            
+            // If we couldn't place it without overlap, just use the default position
+            if (!placed) {
+                int labelX = p.x - labelWidth/2;
+                int labelY = p.y + 25;
+                g2.drawString(displayLabel, labelX, labelY);
+            }
+        }
+
+        g2.dispose();
+    }
+
+    private boolean contains(int[] arr, int x) {
+        for (int v : arr) if (v == x) return true;
+        return false;
+    }
+
+    private boolean isEdgeOnPath(int u, int v) {
+        for (int i = 0; i < highlightedPath.length - 1; i++) {
+            int a = highlightedPath[i], b = highlightedPath[i + 1];
+            if ((a == u && b == v) || (a == v && b == u)) return true;
+        }
+        return false;
+    }
+}
