@@ -290,3 +290,250 @@ class GraphPanel extends JPanel {
         return false;
     }
 }
+
+class LockerTableModel extends AbstractTableModel {
+    private final LockerSystem lockerSystem;
+    private final Graph graph;
+    private final int[] lockerIds;
+    private final String[] columns = {"Locker ID", "Locker Station", "Status", "Assigned To"};
+
+    public LockerTableModel(LockerSystem lockerSystem, Graph graph) {
+        this.lockerSystem = lockerSystem;
+        this.graph = graph;
+        this.lockerIds = lockerSystem.getLockerIds();
+    }
+
+    public int getRowCount() { return lockerIds.length; }
+    public int getColumnCount() { return columns.length; }
+    public String getColumnName(int col) { return columns[col]; }
+
+    public Object getValueAt(int row, int col) {
+        int id = lockerIds[row];
+        return switch (col) {
+            case 0 -> id;
+            case 1 -> graph.getName(id);
+            case 2 -> lockerSystem.isOccupied(id) ? "Occupied" : "Available";
+            case 3 -> lockerSystem.isOccupied(id) ? lockerSystem.assignedTo(id) : "";
+            default -> "";
+        };
+    }
+
+    public int getLockerIdAtRow(int row) { return lockerIds[row]; }
+    public void refresh() { fireTableDataChanged(); }
+}
+
+class MainFrame extends JFrame {
+    private final Graph graph;
+    private final LockerSystem lockerSystem;
+    private final GraphPanel graphPanel;
+    private final LockerTableModel tableModel;
+    private final JTable lockerTable;
+    private final JTextField userField = new JTextField(16);
+    private final JComboBox<String> locationCombo = new JComboBox<>();
+    private final JTextArea logArea = new JTextArea(6, 50);
+    private final Map<String, Integer> nameToIndex = new HashMap<>();
+
+    public MainFrame(Graph graph, LockerSystem lockerSystem) {
+        super("Amusement Park SmartLocker Finder");
+        this.graph = graph;
+        this.lockerSystem = lockerSystem;
+        graphPanel = new GraphPanel(graph, lockerSystem);
+        tableModel = new LockerTableModel(lockerSystem, graph);
+        lockerTable = new JTable(tableModel);
+        buildUI();
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        pack();
+        setLocationRelativeTo(null);
+    }
+
+    private void buildUI() {
+        // map names to indices and populate location selector with non-lockers (blue nodes)
+        for (int i = 0; i < graph.size(); i++) {
+            nameToIndex.put(graph.getName(i), i);
+            if (!lockerSystem.isLocker(i)) locationCombo.addItem(graph.getName(i));
+        }
+
+        JPanel left = new JPanel(new BorderLayout());
+        left.add(graphPanel, BorderLayout.CENTER);
+
+        JPanel right = new JPanel();
+        right.setLayout(new BoxLayout(right, BoxLayout.Y_AXIS));
+        right.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+
+        JLabel title = new JLabel("Locker Stations");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
+        right.add(title);
+
+        lockerTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        JScrollPane tableScroll = new JScrollPane(lockerTable);
+        tableScroll.setPreferredSize(new Dimension(420, 240));
+        right.add(tableScroll);
+        right.add(Box.createVerticalStrut(8));
+        
+        //Your Location - Drop Down
+        JPanel locPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        locPanel.add(new JLabel("Your location:"));
+        locationCombo.setPrototypeDisplayValue("Fantasy Fork (Central)");
+        locPanel.add(locationCombo);
+        right.add(locPanel);
+
+        //Guest Name - Input box
+        JPanel userPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        userPanel.add(new JLabel("Guest name:"));
+        userPanel.add(userField);
+        right.add(userPanel);
+
+        //Button set
+        JPanel buttons = new JPanel(new GridLayout(0, 1, 6, 6));
+        JButton previewBtn = new JButton("Preview Path");
+        previewBtn.addActionListener(this::onPreview);
+        JButton requestBtn = new JButton("Request Locker");
+        requestBtn.addActionListener(this::onRequest);
+        JButton releaseBtn = new JButton("Release Locker");
+        releaseBtn.addActionListener(this::onRelease);
+        JButton resetBtn = new JButton("Reset Map");
+        resetBtn.addActionListener(this::onReset);
+        buttons.add(previewBtn);
+        buttons.add(requestBtn);
+        buttons.add(releaseBtn);
+        buttons.add(resetBtn);
+        right.add(buttons);
+
+        //Log area - Log view
+        logArea.setEditable(false);
+        JScrollPane logScroll = new JScrollPane(logArea);
+        logScroll.setBorder(BorderFactory.createTitledBorder("Log"));
+        right.add(logScroll);
+
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, left, right);
+        split.setResizeWeight(0.65);
+        getContentPane().add(split, BorderLayout.CENTER);
+    }
+
+    private int getSelectedSourceIndex() {
+        String sel = (String) locationCombo.getSelectedItem();
+        return nameToIndex.getOrDefault(sel, 0);
+    }
+
+    private void onPreview(ActionEvent e) {
+        int src = getSelectedSourceIndex();
+        int locker = lockerSystem.findNearestAvailableLocker(graph, src);
+        if (locker != -1) {
+            int[] path = lockerSystem.getPathToLocker(graph, src, locker);
+            graphPanel.setHighlightedPath(path);
+            double km = graph.calculatePathDistance(path) / 1000.0;
+            log("From \"" + graph.getName(src) + "\" → nearest locker: "
+                    + graph.getName(locker) + " | Path " + Arrays.toString(pathNames(path))
+                    + " | Distance: " + String.format("%.2f km", km));
+        } else {
+            graphPanel.setHighlightedPath(new int[0]);
+            log("No lockers available.");
+        }
+    }
+
+    private void onRequest(ActionEvent e) {
+        String user = userField.getText().trim();
+        if (user.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Enter a guest name first.");
+            return;
+        }
+        int src = getSelectedSourceIndex();
+        String msg = lockerSystem.requestLocker(user, graph, src);
+        tableModel.refresh();
+        log(msg);
+        onPreview(null);
+    }
+
+    private void onRelease(ActionEvent e) {
+        int row = lockerTable.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Select a locker row to release.");
+            return;
+        }
+        int lockerId = tableModel.getLockerIdAtRow(row);
+        int src = getSelectedSourceIndex();
+        String msg = lockerSystem.releaseLocker(lockerId, graph, src);
+        tableModel.refresh();
+        log(msg);
+        onPreview(null);
+    }
+
+    private void onReset(ActionEvent e) {
+        SwingUtilities.invokeLater(() -> {
+            dispose();
+            MainFrame newFrame = AppFactory.createApp();
+            newFrame.setVisible(true);
+        });
+    }
+
+    private String[] pathNames(int[] path) {
+        String[] arr = new String[path.length];
+        for (int i = 0; i < path.length; i++) arr[i] = graph.getName(path[i]);
+        return arr;
+    }
+
+    private void log(String s) {
+        logArea.append(s + "\n");
+        logArea.setCaretPosition(logArea.getDocument().getLength());
+    }
+
+    // -------- factory & demo data --------
+    public static class AppFactory {
+        public static MainFrame createApp() {
+            Graph graph = DemoData.buildParkGraph();
+            boolean[] lockers = DemoData.buildParkLockers(graph.size());
+            LockerSystem system = new LockerSystem(lockers);
+            return new MainFrame(graph, system);
+        }
+    }
+
+    public static class DemoData {
+        public static Graph buildParkGraph() {
+            Graph g = new Graph();
+
+            int entranceW   = g.addNode("West Entrance", 120, 320);
+            int mainPlaza   = g.addNode("Main Plaza (Hub)", 240, 320);
+            int adventureJn = g.addNode("Adventure Junction", 360, 320);
+            int fantasyFork = g.addNode("Fantasy Fork (Central)", 480, 320);
+            int tomorrowBend= g.addNode("Tomorrow Bend", 600, 320);
+            int exitE       = g.addNode("East Exit", 720, 320);
+
+            int jungleGate  = g.addNode("Jungle Gate", 360, 220);
+            int lagoonTurn  = g.addNode("Lagoon Turn", 360, 420);
+            int castlePath  = g.addNode("Castle Path", 480, 220);
+            int carouselWay = g.addNode("Carousel Way", 480, 420);
+
+            int lockHubA    = g.addNode("Locker Station A (Hub North)", 240, 220);
+            int lockHubB    = g.addNode("Locker Station B (Hub South)", 240, 420);
+            int lockAdv     = g.addNode("Locker Station C (Adventure)", 360, 150);
+            int lockFnt     = g.addNode("Locker Station D (Fantasy)", 480, 150);
+
+            g.addUndirectedEdge(entranceW, mainPlaza);
+            g.addUndirectedEdge(mainPlaza, adventureJn);
+            g.addUndirectedEdge(adventureJn, fantasyFork);
+            g.addUndirectedEdge(fantasyFork, tomorrowBend);
+            g.addUndirectedEdge(tomorrowBend, exitE);
+
+            g.addUndirectedEdge(adventureJn, jungleGate);
+            g.addUndirectedEdge(adventureJn, lagoonTurn);
+            g.addUndirectedEdge(fantasyFork, castlePath);
+            g.addUndirectedEdge(fantasyFork, carouselWay);
+
+            g.addUndirectedEdge(mainPlaza, lockHubA);
+            g.addUndirectedEdge(mainPlaza, lockHubB);
+            g.addUndirectedEdge(jungleGate, lockAdv);
+            g.addUndirectedEdge(castlePath, lockFnt);
+
+            return g;
+        }
+
+        public static boolean[] buildParkLockers(int n) {
+            boolean[] lockers = new boolean[n];
+            lockers[10] = true; // Locker Station A
+            lockers[11] = true; // Locker Station B
+            lockers[12] = true; // Locker Station C
+            lockers[13] = true; // Locker Station D
+            return lockers;
+        }
+    }
+}
