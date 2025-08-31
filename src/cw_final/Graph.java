@@ -58,6 +58,23 @@ public class Graph {
         }
         return new PathResult(dist, prev);
     }
+    
+        //Path recons
+    public int[] reconstructPath(int dest, int[] prev) {
+        int[] temp = new int[nodeCount];
+        int len = 0, cur = dest;
+        while(cur != -1) { temp[len++] = cur; cur = prev[cur]; }
+        int[] path = new int[len];
+        for(int i=0;i<len;i++) path[i]=temp[len-1-i];
+        return path;
+    }
+
+    // Path Distance calc
+    public int calculatePathDistance(int[] path) {
+        int dist = 0;
+        for(int i=0;i<path.length-1;i++) dist += adjMatrix[path[i]][path[i+1]];
+        return dist;
+    }
 
     // -------- DFS --------
     public List<Integer> dfs(int src){
