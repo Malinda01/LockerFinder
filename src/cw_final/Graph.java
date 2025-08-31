@@ -58,4 +58,40 @@ public class Graph {
         }
         return new PathResult(dist, prev);
     }
+    
+    // -------- Kruskal --------
+    public List<int[]> kruskalMST(){
+        List<int[]> edges = new ArrayList<>();
+        for(int u=0; u<nodeCount; u++){
+            for(int v=u+1; v<nodeCount; v++){
+                if(adjMatrix[u][v]>0) edges.add(new int[]{u,v,adjMatrix[u][v]});
+            }
+        }
+        // bubble sort
+        for (int i = 0; i < edges.size() - 1; i++) {
+            for (int j = 0; j < edges.size() - i - 1; j++) {
+                if (edges.get(j)[2] > edges.get(j+1)[2]) {
+                    int[] tmp = edges.get(j);
+                    edges.set(j, edges.get(j+1));
+                    edges.set(j+1, tmp);
+                }
+            }
+        }
+        int[] parent = new int[nodeCount];
+        for(int i=0;i<nodeCount;i++) parent[i]=i;
+
+        List<int[]> mst = new ArrayList<>();
+        for(int[] e: edges){
+            int u=find(parent,e[0]), v=find(parent,e[1]);
+            if(u!=v){
+                mst.add(e);
+                parent[u]=v;
+            }
+        }
+        return mst;
+    }
+    private int find(int[] parent,int u){
+        if(parent[u]!=u) parent[u]=find(parent,parent[u]);
+        return parent[u];
+    }
 }
