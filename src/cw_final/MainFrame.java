@@ -22,7 +22,7 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 import javax.swing.table.AbstractTableModel;
-import newpackage.Graph;
+import cw_final.Graph;
 
 // ================= MAIN FRAME =================
 class MainFrame extends JFrame{

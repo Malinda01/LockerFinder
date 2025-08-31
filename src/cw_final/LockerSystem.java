@@ -1,8 +1,8 @@
 package cw_final;
 
 import java.util.*;
-import newpackage.Graph;
-import newpackage.PathResult;
+import cw_final.Graph;
+import cw_final.PathResult;
 
 public class LockerSystem {
     private final boolean[] isLocker;
