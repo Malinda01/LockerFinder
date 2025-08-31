@@ -133,6 +133,19 @@ public class MainFrame {
                 "Reachable Locations from " + graph.getName(src), JOptionPane.INFORMATION_MESSAGE);
     }
 
+    // DFS considering distance threshold
+    private void dfsDistance(int u, int cumDist, int maxDist, boolean[] visited, List<Integer> nodes, List<int[]> edges) {
+        visited[u] = true;
+        nodes.add(u);
+        for (int v = 0; v < graph.size(); v++) {
+            int w = graph.getAdjMatrix()[u][v];
+            if (w > 0 && !visited[v] && cumDist + w <= maxDist) {
+                edges.add(new int[]{u, v});
+                dfsDistance(v, cumDist + w, maxDist, visited, nodes, edges);
+            }
+        }
+    }
+
         StringBuilder sb = new StringBuilder("MST edges (Kruskal, scratch):\n");
         for(int[] e : mst){
             sb.append(graph.getName(e[0]))
