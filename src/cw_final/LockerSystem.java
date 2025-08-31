@@ -16,6 +16,27 @@ public class LockerSystem {
         occupied = new boolean[n];
         assignedTo = new String[n];
     }
+    
+    public boolean isLocker(int node) { return isLocker[node]; }
+    public boolean isOccupied(int node) { return occupied[node]; }
+    public String assignedTo(int node) { return assignedTo[node]; }
+    
+    //Nearest locker
+    public int findNearestAvailableLocker(Graph g, int src) {
+        PathResult pr = g.dijkstra(src);
+        int best = -1, bestDist = Integer.MAX_VALUE;
+        for (int i = 0; i < isLocker.length; i++) {
+            if (isLocker[i] && !occupied[i] && pr.dist[i] < bestDist) {
+                best = i; bestDist = pr.dist[i];
+            }
+        }
+        return best;
+    }
+    
+    public int[] getPathToLocker(Graph g, int src, int locker) {
+        PathResult pr = g.dijkstra(src);
+        return g.reconstructPath(locker, pr.prev);
+    }
 
     public String requestLocker(String user, Graph g, int src) {
         int locker = findNearestAvailableLocker(g, src);
