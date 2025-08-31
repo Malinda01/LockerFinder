@@ -58,8 +58,8 @@ public class Graph {
         }
         return new PathResult(dist, prev);
     }
-    
-        //Path recons
+
+    //Path recons
     public int[] reconstructPath(int dest, int[] prev) {
         int[] temp = new int[nodeCount];
         int len = 0, cur = dest;
@@ -92,7 +92,7 @@ public class Graph {
             }
         }
     }
-    
+
     // -------- Kruskal --------
     public List<int[]> kruskalMST(){
         List<int[]> edges = new ArrayList<>();

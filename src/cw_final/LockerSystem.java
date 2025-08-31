@@ -16,11 +16,11 @@ public class LockerSystem {
         occupied = new boolean[n];
         assignedTo = new String[n];
     }
-    
+
     public boolean isLocker(int node) { return isLocker[node]; }
     public boolean isOccupied(int node) { return occupied[node]; }
     public String assignedTo(int node) { return assignedTo[node]; }
-    
+
     //Nearest locker
     public int findNearestAvailableLocker(Graph g, int src) {
         PathResult pr = g.dijkstra(src);
@@ -32,12 +32,13 @@ public class LockerSystem {
         }
         return best;
     }
-    
+
     public int[] getPathToLocker(Graph g, int src, int locker) {
         PathResult pr = g.dijkstra(src);
         return g.reconstructPath(locker, pr.prev);
     }
 
+    //Request a locker
     public String requestLocker(String user, Graph g, int src) {
         int locker = findNearestAvailableLocker(g, src);
         if (locker != -1) {
@@ -52,6 +53,7 @@ public class LockerSystem {
         }
     }
 
+    //Release a locker
     public String releaseLocker(int lockerId, Graph g, int src) {
         if(!isLocker[lockerId]) return "Not a locker.";
         if(!occupied[lockerId]) return "Locker already free.";

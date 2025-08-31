@@ -15,6 +15,7 @@ public class SimpleQueue<T> {
     public boolean isEmpty() { return size == 0; }
     public int size() { return size; }
 
+    //Enqueue
     public void enqueue(T value) {
         ensureCapacity(size + 1);
         data[tail] = value;
@@ -22,6 +23,7 @@ public class SimpleQueue<T> {
         size++;
     }
 
+    //Dequeue
     @SuppressWarnings("unchecked")
     public T dequeue() {
         if (isEmpty()) return null;
@@ -32,12 +34,14 @@ public class SimpleQueue<T> {
         return val;
     }
 
+    //Peek
     @SuppressWarnings("unchecked")
     public T peek() {
         if (isEmpty()) return null;
         return (T) data[head];
     }
 
+    //Capacity
     private void ensureCapacity(int minCapacity) {
         if (minCapacity <= data.length) return;
         int newCap = data.length * 2;

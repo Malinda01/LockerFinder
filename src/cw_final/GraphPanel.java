@@ -11,6 +11,7 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.RenderingHints;
 import javax.swing.JPanel;
+import cw_final.Graph;
 
 // ================= GRAPH PANEL =================
 class GraphPanel extends JPanel {
