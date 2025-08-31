@@ -58,6 +58,23 @@ public class Graph {
         }
         return new PathResult(dist, prev);
     }
+
+    // -------- DFS --------
+    public List<Integer> dfs(int src){
+        boolean[] visited = new boolean[nodeCount];
+        List<Integer> order = new ArrayList<>();
+        dfsHelper(src, visited, order);
+        return order;
+    }
+    private void dfsHelper(int u, boolean[] visited, List<Integer> order){
+        visited[u]=true;
+        order.add(u);
+        for(int v=0; v<nodeCount; v++){
+            if(adjMatrix[u][v]>0 && !visited[v]){
+                dfsHelper(v, visited, order);
+            }
+        }
+    }
     
     // -------- Kruskal --------
     public List<int[]> kruskalMST(){
