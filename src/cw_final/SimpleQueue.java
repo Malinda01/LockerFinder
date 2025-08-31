@@ -1,4 +1,4 @@
-package newpackage;
+package cw_final;
 
 public class SimpleQueue<T> {
     private Object[] data;
