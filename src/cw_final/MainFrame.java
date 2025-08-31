@@ -58,6 +58,81 @@ public class MainFrame {
             }
         }
 
+        private void handleDFS() {
+        int src = selectNode("Select starting node for DFS:");
+        if (src == -1) return;
+
+        String input = JOptionPane.showInputDialog(this, "Enter max distance (meters) to explore:");
+        if (input == null || input.isEmpty()) return;
+
+        int maxDist;
+        try {
+            maxDist = Integer.parseInt(input);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Invalid distance.");
+            return;
+        }
+
+        boolean[] visited = new boolean[graph.size()];
+        List<Integer> reachableNodes = new ArrayList<>();
+        List<int[]> reachableEdges = new ArrayList<>();
+        dfsDistance(src, 0, maxDist, visited, reachableNodes, reachableEdges);
+
+        GraphPanel popupPanel = new GraphPanel(graph, lockerSystem) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Highlight reachable edges
+                g2.setColor(Color.ORANGE);
+                g2.setStroke(new BasicStroke(3f));
+                for (int[] e : reachableEdges) {
+                    Point pu = graph.getPos(e[0]);
+                    Point pv = graph.getPos(e[1]);
+                    g2.drawLine(pu.x, pu.y, pv.x, pv.y);
+                }
+
+                // Keep track of label positions to avoid overlaps
+                List<java.awt.Rectangle> labelRects = new ArrayList<>();
+                FontMetrics fm = g2.getFontMetrics();
+
+                // Highlight reachable nodes and draw labels
+                for (int u : reachableNodes) {
+                    Point p = graph.getPos(u);
+                    g2.setColor(Color.MAGENTA);
+                    g2.fillOval(p.x - 12, p.y - 12, 24, 24);
+                    g2.setColor(Color.BLACK);
+                    g2.drawOval(p.x - 12, p.y - 12, 24, 24);
+
+                    // Draw label without overlap
+                    String label = graph.getName(u);
+                    int labelWidth = fm.stringWidth(label);
+                    int labelHeight = fm.getHeight();
+                    int x = p.x - labelWidth / 2;
+                    int y = p.y - 15;
+
+                    java.awt.Rectangle rect = new java.awt.Rectangle(x, y - labelHeight, labelWidth, labelHeight);
+                    int shift = 0;
+                    while (labelRects.stream().anyMatch(r -> r.intersects(rect))) {
+                        shift += labelHeight + 2; // shift down
+                        rect.y = y - labelHeight + shift;
+                    }
+                    labelRects.add(rect);
+                    g2.drawString(label, rect.x, rect.y + labelHeight);
+                }
+
+                g2.dispose();
+            }
+        };
+
+        popupPanel.setPreferredSize(new Dimension(1000, 700));
+
+        JOptionPane.showMessageDialog(this, new JScrollPane(popupPanel),
+                "Reachable Locations from " + graph.getName(src), JOptionPane.INFORMATION_MESSAGE);
+    }
+
         StringBuilder sb = new StringBuilder("MST edges (Kruskal, scratch):\n");
         for(int[] e : mst){
             sb.append(graph.getName(e[0]))
