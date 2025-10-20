@@ -37,7 +37,15 @@ The system provides a **visual map**, **locker status table**, and a **log view*
 
 <img width="1693" height="872" alt="image" src="https://github.com/user-attachments/assets/a59931c0-1b98-4b04-8fa8-72d447a12ebc" />
 
+## Screen Record
+
+
+
 ---
+
+https://github.com/user-attachments/assets/1cd863e0-b23f-4470-932d-6e00ef7d567a
+
+
 
 ## 🏗️ Project Structure
 
